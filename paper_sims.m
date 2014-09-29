@@ -7,12 +7,12 @@ clc;close all;clear all;
 
 s = RandStream('mcg16807','Seed',0) ; RandStream.setGlobalStream(s);
 nRuns       = 1;
-nBeta       = 100; %fixed dimension. Higher means, more data is required.
+nBeta       = 10; %fixed dimension. Higher means, more data is required.
 betaTrue    = randn(nBeta,1);
-nTrainArray = floor(nBeta*[1.1]);
+nTrainArray = floor(nBeta*[3.1]);
 nTest       = mean(nTrainArray);%can be anything.
 nKnowledge  = 100;
-noiseSigma  = .4;
+noiseSigma  = 1;
 
 %The features need not be random here. Only the residuals need to be random.
 
@@ -37,12 +37,17 @@ title(['norm(betaEst-betaTrue): ' num2str(norm(betaEst-betaTrue,2))])
 
 %% Step 2: Fit model without side Knowledge: Ridge Regression
 
-nFoldsCV   = 5;
-nRepeatsCV = 3;
+nFolds   = 5;
+nRepeats = 3;
 coeffRange = 2.^([-3:1:0]);
-[Y_hat_val,betaCVX,regularize_coeff,cv_matrix,Y_hat_trn] = ...
-    cvalidated_model('Ridge',coeffRange,nfolds,nrepeats,sampleTrainX,sampleTrainY,X_val,model_disable_CV,0.0001);
-metrics = metric_of_success(sampleTestY,Y_hat_val,length(sampleTrainX(1,:)),'Val',str_dependent,'Ridge',plot_enable);
+[betaCVX, bestModelCoeff, cvMatrix] = ...
+    select_model_using_cv('Ridge', coeffRange, nFolds, nRepeats, sampleTrainX, sampleTrainY);
+
+%%
+figure(2); plot(betaCVX,betaTrue,'.')
+title(['norm(betaCVX-betaTrue): ' num2str(norm(betaCVX-betaTrue,2))])
+
+%metrics = metric_of_success(sampleTestY,Y_hat_val,length(sampleTrainX(1,:)),'Val',str_dependent,'Ridge',plot_enable);
 
 
 %%
