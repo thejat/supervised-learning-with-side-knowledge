@@ -43,7 +43,7 @@ coeffRange = 2.^([-7:1:0]);
     select_model_using_cv('Ridge', coeffRange, nFolds, nRepeats, sampleTrainX, sampleTrainY, zeros(1,nBeta));
 
 %%
-%figure(2); plot(betaBaseline,betaTrue,'.'); title(['norm(betaBaseline-betaTrue): ' num2str(norm(betaBaseline-betaTrue,2))])
+figure(2); plot(betaBaseline,betaTrue,'.'); title(['norm(betaBaseline-betaTrue): ' num2str(norm(betaBaseline-betaTrue,2))])
 
 %metrics = metric_of_success(sampleTestY,Y_hat_val,length(sampleTrainX(1,:)),'Val',str_dependent,'Ridge',plot_enable);
 
