@@ -3,7 +3,7 @@
 %Outputs the best linear model. This can then be used on the final held out
 %test set.
 function [betaCVX, bestModelCoeff, cvMatrix] = ...
-    select_model_using_cv(strModelName, coeffRange, nFolds, nRepeats, sampleTrainX, sampleTrainY)
+    select_model_using_cv(strModelName, coeffRange, nFolds, nRepeats, sampleTrainX, sampleTrainY, knowledgeMatrix)
 
 %search for best coeff value
 cvMatrix = zeros(length(coeffRange),nFolds);
@@ -24,7 +24,7 @@ for k=1:nRepeats%For each repetition of the CV step, get expected CV matrix
             if    (strcmp(strModelName,'Lasso')==1)
                 betaCVX = lasso_regression(XEverythingElse,YEverythingElse,coeffRange(i));
             elseif(strcmp(strModelName,'Ridge')==1)
-                betaCVX = ridge_regression(XEverythingElse,YEverythingElse,coeffRange(i));
+                betaCVX = ridge_regression(XEverythingElse,YEverythingElse,coeffRange(i),knowledgeMatrix);
             elseif(strcmp(strModelName,'SVR')==1)
                 betaCVX = support_vector_regression(XEverythingElse,YEverythingElse,coeffRange(i));
             end
@@ -43,7 +43,7 @@ bestModelCoeff = coeffRange(bestModelIndex);
 if    (strcmp(strModelName,'Lasso')==1)
     betaCVX = lasso_regression(sampleTrainX,sampleTrainY,bestModelCoeff);
 elseif(strcmp(strModelName,'Ridge')==1)
-    betaCVX = ridge_regression(sampleTrainX,sampleTrainY,bestModelCoeff);
+    betaCVX = ridge_regression(sampleTrainX,sampleTrainY,bestModelCoeff,knowledgeMatrix);
 elseif(strcmp(strModelName,'SVR')==1)
     betaCVX = support_vector_regression(sampleTrainX,sampleTrainY,bestModelCoeff);
 end
