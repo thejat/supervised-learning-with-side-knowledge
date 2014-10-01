@@ -9,7 +9,7 @@ s = RandStream('mcg16807','Seed',1000) ; RandStream.setGlobalStream(s);
 nRuns       = 1;
 nBeta       = 100; %fixed dimension. Higher means, more data is required.
 betaTrue    = randn(nBeta,1);
-nTrainArray = floor(nBeta*[1.5:1:3.5]);
+nTrainArray = floor(nBeta*[1.5:1:4.5]);
 nTest       = max(nTrainArray);%can be anything.
 nKnowledge  = nBeta; %floor(sqrt(max(nTrainArray)));
 noiseSigma  = 0.3*sqrt(nBeta);
@@ -54,7 +54,7 @@ for i=1:nRuns %Multiple samples from the data source.
     % The following are the parameter settings we will use for this section.
 
     knowledgeMatrix = get_knowledge_matrix('None',sampleKnowledgeX,sampleKnowledgeY);
-    
+    if(matlabpool('size') == 0) matlabpool; end
     parfor j=1:length(nTrainArray)
         fprintf('Run %d of %d: Ridge Reg. without knowledge: CV for sample size index j = %d of %d.\n', i, nRuns, j, length(nTrainArray));
         [betaBaseline{j}, bestBaselineCoeff{j}, cvBaselineMatrix{j}] = ...
@@ -77,8 +77,9 @@ for i=1:nRuns %Multiple samples from the data source.
             select_model_using_cv('Ridge', coeffRange, nFolds, nRepeats, sampleTrainX(1:nTrainArray(j),:), sampleTrainY(1:nTrainArray(j)), knowledgeMatrix);
         %figure(3); plot(betaLinear,betaTrue,'.'); title(['norm(betaLinear-betaTrue): ' num2str(norm(betaLinear-betaTrue,2))])
         metricsLinear{j} = metric_of_success(sampleTestY,sampleTestX*betaLinear{j},size(sampleTestX,2),'Test','Ridge',0);
-        toc
     end
+    toc
+
 
     % Collecting performance statistics
     for j=1:length(nTrainArray)
