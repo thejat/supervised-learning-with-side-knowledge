@@ -7,7 +7,7 @@ clc;close all;clear all;
 
 s = RandStream('mcg16807','Seed',1000) ; RandStream.setGlobalStream(s);
 nRuns       = 1;
-nBeta       = 100; %fixed dimension. Higher means, more data is required.
+nBeta       = 20; %fixed dimension. Higher means, more data is required.
 betaTrue    = randn(nBeta,1);
 nTrainArray = floor(nBeta*[1.5:1:4.5]);
 nTest       = max(nTrainArray);%can be anything.
@@ -53,12 +53,12 @@ for i=1:nRuns %Multiple samples from the data source.
 
     % The following are the parameter settings we will use for this section.
 
-    knowledgeMatrix = get_knowledge_matrix('None',sampleKnowledgeX,sampleKnowledgeY);
+    knowledge = get_knowledge('None',sampleKnowledgeX,sampleKnowledgeY);
     if(matlabpool('size') == 0) matlabpool; end
     parfor j=1:length(nTrainArray)
         fprintf('Run %d of %d: Ridge Reg. without knowledge: CV for sample size index j = %d of %d.\n', i, nRuns, j, length(nTrainArray));
         [betaBaseline{j}, bestBaselineCoeff{j}, cvBaselineMatrix{j}] = ...
-            select_model_using_cv('Ridge', coeffRange, nFolds, nRepeats, sampleTrainX(1:nTrainArray(j),:), sampleTrainY(1:nTrainArray(j)), knowledgeMatrix);
+            select_model_using_cv('Ridge', coeffRange, nFolds, nRepeats, sampleTrainX(1:nTrainArray(j),:), sampleTrainY(1:nTrainArray(j)), knowledge);
         %figure(2); plot(betaBaseline,betaTrue,'.'); title(['norm(betaBaseline-betaTrue): ' num2str(norm(betaBaseline-betaTrue,2))])
         metricsBaseline{j} = metric_of_success(sampleTestY,sampleTestX*betaBaseline{j},size(sampleTestX,2),'Test','Ridge',0);
     end
@@ -69,12 +69,12 @@ for i=1:nRuns %Multiple samples from the data source.
 
     % The following are the parameter settings we will use for this section.
 
-    knowledgeMatrix = get_knowledge_matrix('Linear',sampleKnowledgeX,sampleKnowledgeY);
+    knowledge = get_knowledge('Linear',sampleKnowledgeX,sampleKnowledgeY);
 
     parfor j=1:length(nTrainArray)
         fprintf('Run %d of %d: Ridge Reg. with knowledge: CV for sample size index j = %d of %d.\n', i, nRuns, j, length(nTrainArray));
         [betaLinear{j}, bestLinearCoeff{j}, cvLinearMatrix{j}] = ...
-            select_model_using_cv('Ridge', coeffRange, nFolds, nRepeats, sampleTrainX(1:nTrainArray(j),:), sampleTrainY(1:nTrainArray(j)), knowledgeMatrix);
+            select_model_using_cv('Ridge', coeffRange, nFolds, nRepeats, sampleTrainX(1:nTrainArray(j),:), sampleTrainY(1:nTrainArray(j)), knowledge);
         %figure(3); plot(betaLinear,betaTrue,'.'); title(['norm(betaLinear-betaTrue): ' num2str(norm(betaLinear-betaTrue,2))])
         metricsLinear{j} = metric_of_success(sampleTestY,sampleTestX*betaLinear{j},size(sampleTestX,2),'Test','Ridge',0);
     end
