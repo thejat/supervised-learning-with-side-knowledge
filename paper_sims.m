@@ -1,18 +1,18 @@
 %Generate multiple random fullsamples (training, test, side knowledge) with
 %the same coefficients and run regression with side knowledge while learning.
 
-%% Step 1: Generate simulated data
+% Step 1: Generate simulated data
 
 clc;close all;clear all;
 
-s = RandStream('mcg16807','Seed',0) ; RandStream.setGlobalStream(s);
+s = RandStream('mcg16807','Seed',1000) ; RandStream.setGlobalStream(s);
 nRuns       = 1;
-nBeta       = 10; %fixed dimension. Higher means, more data is required.
+nBeta       = 100; %fixed dimension. Higher means, more data is required.
 betaTrue    = randn(nBeta,1);
-nTrainArray = floor(nBeta*[3.1]);
-nTest       = mean(nTrainArray);%can be anything.
-nKnowledge  = 100;
-noiseSigma  = 1;
+nTrainArray = floor(nBeta*[1.5:1:3.5]);
+nTest       = max(nTrainArray);%can be anything.
+nKnowledge  = nBeta; %floor(sqrt(max(nTrainArray)));
+noiseSigma  = 0.3*sqrt(nBeta);
 
 %The features need not be random here. Only the residuals need to be random.
 
@@ -24,40 +24,89 @@ sampleTestY = sampleTestX*betaTrue + noiseSigma*randn(nTest,1);
 sampleKnowledgeX = randn(nKnowledge,nBeta)*chol(featureSigma); %kept same for a given beta
 sampleKnowledgeY = sampleKnowledgeX*betaTrue; %No need to add noise% + noiseSigma*randn(nKnowledge,1);
 
-for i=1:nRuns
+
+tic
+for i=1:nRuns %Multiple samples from the data source.
+
     sampleTrainX = randn(max(nTrainArray),nBeta)*chol(featureSigma);
     sampleTrainY = sampleTrainX*betaTrue + noiseSigma*randn(max(nTrainArray),1);
+
+    % Step 2: In this step, we will fit three models, OLS, ridge regression and
+    % ridge regression with side knowledge.
+    
+    %Some common settings
+    nFolds   = 5;
+    nRepeats = 1;
+    coeffRange = 2.^([-7:2:0]);
+
+    % Step 2a: Ordinary least squares (without any regularization)
+
+    for j=1:length(nTrainArray)
+
+        betaOLS{j} = sampleTrainX(1:nTrainArray(j),:)\sampleTrainY(1:nTrainArray(j));
+        %figure(1); plot(betaOLS,betaTrue,'.'); title(['norm(betaOLS-betaTrue): ' num2str(norm(betaOLS-betaTrue,2))])
+        metricsOLS{j} = metric_of_success(sampleTestY,sampleTestX*betaOLS{j},size(sampleTestX,2),'Test','Ridge',0);
+    end
+
+
+    % Step 2b: Ridge regression without side knowledge (with ell_2 regularization)
+
+    % The following are the parameter settings we will use for this section.
+
+    knowledgeMatrix = get_knowledge_matrix('None',sampleKnowledgeX,sampleKnowledgeY);
+    
+    parfor j=1:length(nTrainArray)
+        fprintf('Run %d of %d: Ridge Reg. without knowledge: CV for sample size index j = %d of %d.\n', i, nRuns, j, length(nTrainArray));
+        [betaBaseline{j}, bestBaselineCoeff{j}, cvBaselineMatrix{j}] = ...
+            select_model_using_cv('Ridge', coeffRange, nFolds, nRepeats, sampleTrainX(1:nTrainArray(j),:), sampleTrainY(1:nTrainArray(j)), knowledgeMatrix);
+        %figure(2); plot(betaBaseline,betaTrue,'.'); title(['norm(betaBaseline-betaTrue): ' num2str(norm(betaBaseline-betaTrue,2))])
+        metricsBaseline{j} = metric_of_success(sampleTestY,sampleTestX*betaBaseline{j},size(sampleTestX,2),'Test','Ridge',0);
+    end
+    toc
+
+            
+    % Step 2c: Ridge regression with linear side knowledge (with ell_2 regularization)
+
+    % The following are the parameter settings we will use for this section.
+
+    knowledgeMatrix = get_knowledge_matrix('Linear',sampleKnowledgeX,sampleKnowledgeY);
+
+    parfor j=1:length(nTrainArray)
+        fprintf('Run %d of %d: Ridge Reg. with knowledge: CV for sample size index j = %d of %d.\n', i, nRuns, j, length(nTrainArray));
+        [betaLinear{j}, bestLinearCoeff{j}, cvLinearMatrix{j}] = ...
+            select_model_using_cv('Ridge', coeffRange, nFolds, nRepeats, sampleTrainX(1:nTrainArray(j),:), sampleTrainY(1:nTrainArray(j)), knowledgeMatrix);
+        %figure(3); plot(betaLinear,betaTrue,'.'); title(['norm(betaLinear-betaTrue): ' num2str(norm(betaLinear-betaTrue,2))])
+        metricsLinear{j} = metric_of_success(sampleTestY,sampleTestX*betaLinear{j},size(sampleTestX,2),'Test','Ridge',0);
+        toc
+    end
+
+    % Collecting performance statistics
+    for j=1:length(nTrainArray)
+        rmseOLSArray(j) = metricsOLS{j}.rmse;
+        rmseBaselineArray(j) = metricsBaseline{j}.rmse;
+        rmseLinearArray(j) = metricsLinear{j}.rmse;
+    end
+    runDataOLS(:,i) = rmseOLSArray'; 
+    runDataBaseline(:,i) = rmseBaselineArray';
+    runDataLinear(:,i) = rmseLinearArray';
 end
 
-%% Step 2a: Ordinary least squares
-
-betaOLS = sampleTrainX\sampleTrainY;
-figure(1); plot(betaOLS,betaTrue,'.'); title(['norm(betaOLS-betaTrue): ' num2str(norm(betaOLS-betaTrue,2))])
-
-%% Step 2: Fit model without side Knowledge: Ridge Regression
-
-nFolds   = 5;
-nRepeats = 1;
-coeffRange = 2.^([-7:1:0]);
-[betaBaseline, bestModelCoeff, cvMatrix] = ...
-    select_model_using_cv('Ridge', coeffRange, nFolds, nRepeats, sampleTrainX, sampleTrainY, zeros(1,nBeta));
-
-%%
-figure(2); plot(betaBaseline,betaTrue,'.'); title(['norm(betaBaseline-betaTrue): ' num2str(norm(betaBaseline-betaTrue,2))])
-
-%metrics = metric_of_success(sampleTestY,Y_hat_val,length(sampleTrainX(1,:)),'Val',str_dependent,'Ridge',plot_enable);
-
-
-%% Step 2b: Fit model with side knowledge: 
+% Plotting
+runDataOLSMean = mean(runDataOLS,2); runDataOLSStd = std(runDataOLS,1,2);
+runDataBaselineMean = mean(runDataBaseline,2); runDataBaselineStd = std(runDataBaseline,1,2);
+runDataLinearMean = mean(runDataLinear,2); runDataLinearStd = std(runDataLinear,1,2);
+figure(3); plot(nTrainArray,runDataOLSMean,'b-'); hold on;
+plot(nTrainArray,runDataOLSMean - runDataOLSStd,'b--'); 
+plot(nTrainArray,runDataOLSMean + runDataOLSStd,'b--'); 
+plot(nTrainArray,runDataBaselineMean,'r-');
+plot(nTrainArray,runDataBaselineMean - runDataBaselineStd,'r--'); 
+plot(nTrainArray,runDataBaselineMean + runDataBaselineStd,'r--');
+plot(nTrainArray,runDataLinearMean,'g-');
+plot(nTrainArray,runDataLinearMean - runDataLinearStd,'g--'); 
+plot(nTrainArray,runDataLinearMean + runDataLinearStd,'g--'); 
+hold off;
+title('RMSE of various methods')
+ylabel('RMSE (lower is better)')
+xlabel('Sample size')
 
 
-
-
-%{
-
-plot of performance (measured using RMSE) as a function of training sample
-size.
-
-For st plot performance for without knowledge case with error bars.
-
-%}
