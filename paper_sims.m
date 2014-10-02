@@ -6,10 +6,10 @@
 clc;close all;clear all;
 
 s = RandStream('mcg16807','Seed',1000) ; RandStream.setGlobalStream(s);
-nRuns       = 4;
+nRuns       = 1;
 nBeta       = 20; %fixed dimension. Higher means, more data is required.
 betaTrue    = randn(nBeta,1);
-nTrainArray = floor(nBeta*[1.5:1:8.5]);
+nTrainArray = floor(nBeta*[1.5:2:7.5]);
 nTest       = max(nTrainArray);%can be anything.
 nKnowledge  = nBeta; %floor(sqrt(max(nTrainArray)));
 noiseSigma  = 0.3*sqrt(nBeta);
@@ -28,6 +28,8 @@ sampleKnowledgeY = sampleKnowledgeX*betaTrue; %No need to add noise% + noiseSigm
 tic
 for i=1:nRuns %Multiple samples from the data source.
 
+    fprintf('Ridge Regression. Run %d of %d\n',i,nRuns);
+    
     sampleTrainX = randn(max(nTrainArray),nBeta)*chol(featureSigma);
     sampleTrainY = sampleTrainX*betaTrue + noiseSigma*randn(max(nTrainArray),1);
 
@@ -53,10 +55,10 @@ for i=1:nRuns %Multiple samples from the data source.
 
     % The following are the parameter settings we will use for this section.
 
-    knowledgeNone = get_knowledge('None',sampleKnowledgeX,sampleKnowledgeY);
+    knowledgeNone = get_knowledge('None',sampleKnowledgeX,sampleKnowledgeY,betaTrue);
     if(matlabpool('size') == 0) matlabpool; end
     parfor j=1:length(nTrainArray)
-        fprintf('Run %d of %d: Ridge Reg. without knowledge: CV for sample size index j = %d of %d.\n', i, nRuns, j, length(nTrainArray));
+        fprintf('Without knowledge: CV for sample size index j = %d of %d.\n', j, length(nTrainArray));
         [betaBaseline{j}, bestBaselineCoeff{j}, cvBaselineMatrix{j}] = ...
             select_model_using_cv('Ridge', coeffRange, nFolds, nRepeats, sampleTrainX(1:nTrainArray(j),:), sampleTrainY(1:nTrainArray(j)), knowledgeNone);
         %figure(2); plot(betaBaseline,betaTrue,'.'); title(['norm(betaBaseline-betaTrue): ' num2str(norm(betaBaseline-betaTrue,2))])
@@ -65,29 +67,43 @@ for i=1:nRuns %Multiple samples from the data source.
     toc
 
             
-    % Step 2c: Ridge regression with linear side knowledge (with ell_2 regularization)
+    % Step 2c: Ridge regression with Linear side knowledge (with ell_2 regularization)
 
-    % The following are the parameter settings we will use for this section.
-
-    knowledgeLinear = get_knowledge('Linear',sampleKnowledgeX,sampleKnowledgeY);
+    knowledgeLinear = get_knowledge('Linear',sampleKnowledgeX,sampleKnowledgeY,betaTrue);
 
     parfor j=1:length(nTrainArray)
-        fprintf('Run %d of %d: Ridge Reg. with linear knowledge: CV for sample size index j = %d of %d.\n', i, nRuns, j, length(nTrainArray));
+        fprintf('With Linear knowledge: CV for sample size index j = %d of %d.\n', j, length(nTrainArray));
         [betaLinear{j}, bestLinearCoeff{j}, cvLinearMatrix{j}] = ...
             select_model_using_cv('Ridge', coeffRange, nFolds, nRepeats, sampleTrainX(1:nTrainArray(j),:), sampleTrainY(1:nTrainArray(j)), knowledgeLinear);
         %figure(3); plot(betaLinear,betaTrue,'.'); title(['norm(betaLinear-betaTrue): ' num2str(norm(betaLinear-betaTrue,2))])
         metricsLinear{j} = metric_of_success(sampleTestY,sampleTestX*betaLinear{j},size(sampleTestX,2),'Test','Ridge',0);
     end
     toc
+    
+    % Step 2d: Ridge regression with Quadratic side knowledge (with ell_2 regularization)
 
-    knowledgeQuadratic = get_knowledge('Quadratic',sampleKnowledgeX,sampleKnowledgeY);
+    knowledgeQuadratic = get_knowledge('Quadratic',sampleKnowledgeX,sampleKnowledgeY,betaTrue);
 
     parfor j=1:length(nTrainArray)
-        fprintf('Run %d of %d: Ridge Reg. with quadratic knowledge: CV for sample size index j = %d of %d.\n', i, nRuns, j, length(nTrainArray));
+        fprintf('With Quadratic knowledge: CV for sample size index j = %d of %d.\n', j, length(nTrainArray));
         [betaQuadratic{j}, bestQuadraticCoeff{j}, cvQuadraticMatrix{j}] = ...
             select_model_using_cv('Ridge', coeffRange, nFolds, nRepeats, sampleTrainX(1:nTrainArray(j),:), sampleTrainY(1:nTrainArray(j)), knowledgeQuadratic);
         %figure(3); plot(betaQuadratic,betaTrue,'.'); title(['norm(betaQuadratic-betaTrue): ' num2str(norm(betaQuadratic-betaTrue,2))])
         metricsQuadratic{j} = metric_of_success(sampleTestY,sampleTestX*betaQuadratic{j},size(sampleTestX,2),'Test','Ridge',0);
+    end
+    toc
+    
+    
+    % Step 2e: Ridge regression with Conic side knowledge (with ell_2 regularization)
+
+    knowledgeConic = get_knowledge('Conic',sampleKnowledgeX,sampleKnowledgeY,betaTrue);
+
+    parfor j=1:length(nTrainArray)
+        fprintf('With Conic knowledge: CV for sample size index j = %d of %d.\n', j, length(nTrainArray));
+        [betaConic{j}, bestConicCoeff{j}, cvConicMatrix{j}] = ...
+            select_model_using_cv('Ridge', coeffRange, nFolds, nRepeats, sampleTrainX(1:nTrainArray(j),:), sampleTrainY(1:nTrainArray(j)), knowledgeConic);
+        %figure(3); plot(betaConic,betaTrue,'.'); title(['norm(betaConic-betaTrue): ' num2str(norm(betaConic-betaTrue,2))])
+        metricsConic{j} = metric_of_success(sampleTestY,sampleTestX*betaConic{j},size(sampleTestX,2),'Test','Ridge',0);
     end
     toc
     
@@ -98,11 +114,14 @@ for i=1:nRuns %Multiple samples from the data source.
         rmseBaselineArray(j) = metricsBaseline{j}.rmse;
         rmseLinearArray(j) = metricsLinear{j}.rmse;
         rmseQuadraticArray(j) = metricsQuadratic{j}.rmse;
+        rmseConicArray(j) = metricsConic{j}.rmse;
+
     end
     runDataOLS(:,i) = rmseOLSArray'; 
     runDataBaseline(:,i) = rmseBaselineArray';
     runDataLinear(:,i) = rmseLinearArray';
     runDataQuadratic(:,i) = rmseQuadraticArray';
+    runDataConic(:,i) = rmseConicArray';
 end
 
 % Plotting
@@ -110,8 +129,9 @@ runDataOLSMean = mean(runDataOLS,2); runDataOLSStd = std(runDataOLS,1,2);
 runDataBaselineMean = mean(runDataBaseline,2); runDataBaselineStd = std(runDataBaseline,1,2);
 runDataLinearMean = mean(runDataLinear,2); runDataLinearStd = std(runDataLinear,1,2);
 runDataQuadraticMean = mean(runDataQuadratic,2); runDataQuadraticStd = std(runDataQuadratic,1,2);
+runDataConicMean = mean(runDataConic,2); runDataConicStd = std(runDataConic,1,2);
 
-figure(3); plot(nTrainArray,runDataOLSMean,'b-'); hold on;
+figure(1); plot(nTrainArray,runDataOLSMean,'b-'); hold on;
 plot(nTrainArray,runDataOLSMean - runDataOLSStd,'b--'); 
 plot(nTrainArray,runDataOLSMean + runDataOLSStd,'b--'); 
 plot(nTrainArray,runDataBaselineMean,'r-');
@@ -123,6 +143,9 @@ plot(nTrainArray,runDataLinearMean + runDataLinearStd,'g--');
 plot(nTrainArray,runDataQuadraticMean,'k-');
 plot(nTrainArray,runDataQuadraticMean - runDataQuadraticStd,'k--'); 
 plot(nTrainArray,runDataQuadraticMean + runDataQuadraticStd,'k--'); 
+plot(nTrainArray,runDataConicMean,'y-');
+plot(nTrainArray,runDataConicMean - runDataConicStd,'y--'); 
+plot(nTrainArray,runDataConicMean + runDataConicStd,'y--'); 
 hold off;
 title('RMSE of various methods')
 ylabel('RMSE (lower is better)')
