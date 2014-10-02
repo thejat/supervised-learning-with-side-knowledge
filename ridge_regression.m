@@ -19,3 +19,15 @@ if(strcmp(knowledge.strType,'Linear'))
     cvx_end
 
 end
+
+
+if(strcmp(knowledge.strType,'Quadratic'))
+
+    cvx_begin quiet
+        variable betaCVX(length(X(1,:)))
+        minimize( ( X*betaCVX-Y )'*( X*betaCVX-Y )/length(Y) + C*betaCVX'*betaCVX )
+        subject to
+           betaCVX'*knowledge.quadratic.LHS*betaCVX <= knowledge.quadratic.RHS
+    cvx_end
+
+end
