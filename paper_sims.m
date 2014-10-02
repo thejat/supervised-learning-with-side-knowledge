@@ -6,10 +6,10 @@
 clc;close all;clear all;
 
 s = RandStream('mcg16807','Seed',1000) ; RandStream.setGlobalStream(s);
-nRuns       = 1;
+nRuns       = 4;
 nBeta       = 20; %fixed dimension. Higher means, more data is required.
 betaTrue    = randn(nBeta,1);
-nTrainArray = floor(nBeta*[1.5:2:7.5]);
+nTrainArray = floor(nBeta*[1.5:1:8.5]);
 nTest       = max(nTrainArray);%can be anything.
 nKnowledge  = nBeta; %floor(sqrt(max(nTrainArray)));
 noiseSigma  = 0.3*sqrt(nBeta);
