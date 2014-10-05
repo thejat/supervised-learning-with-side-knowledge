@@ -2,17 +2,17 @@
 %the same coefficients and run regression with side knowledge while learning.
 
 % Step 1: Generate simulated data
-
+% matlabpool close force local
 clc;close all;clear all;
 
 s = RandStream('mcg16807','Seed',1000) ; RandStream.setGlobalStream(s);
-nRuns       = 4;
-nBeta       = 20; %fixed dimension. Higher means, more data is required.
+nRuns       = 3;
+nBeta       = 10; %fixed dimension. Higher means, more data is required.
 betaTrue    = randn(nBeta,1);
-nTrainArray = floor(nBeta*[1.5:1:8.5]);
+nTrainArray = floor(nBeta*[1.5:1:4.5]);
 nTest       = max(nTrainArray);%can be anything.
 nKnowledge  = nBeta; %floor(sqrt(max(nTrainArray)));
-noiseSigma  = 0.3*sqrt(nBeta);
+noiseSigma  = 1*sqrt(nBeta);
 
 %The features need not be random here. Only the residuals need to be random.
 
@@ -131,24 +131,38 @@ runDataLinearMean = mean(runDataLinear,2); runDataLinearStd = std(runDataLinear,
 runDataQuadraticMean = mean(runDataQuadratic,2); runDataQuadraticStd = std(runDataQuadratic,1,2);
 runDataConicMean = mean(runDataConic,2); runDataConicStd = std(runDataConic,1,2);
 
-figure(1); plot(nTrainArray,runDataOLSMean,'b-'); hold on;
-plot(nTrainArray,runDataOLSMean - runDataOLSStd,'b--'); 
-plot(nTrainArray,runDataOLSMean + runDataOLSStd,'b--'); 
-plot(nTrainArray,runDataBaselineMean,'r-');
-plot(nTrainArray,runDataBaselineMean - runDataBaselineStd,'r--'); 
-plot(nTrainArray,runDataBaselineMean + runDataBaselineStd,'r--');
-plot(nTrainArray,runDataLinearMean,'g-');
-plot(nTrainArray,runDataLinearMean - runDataLinearStd,'g--'); 
-plot(nTrainArray,runDataLinearMean + runDataLinearStd,'g--'); 
-plot(nTrainArray,runDataQuadraticMean,'k-');
-plot(nTrainArray,runDataQuadraticMean - runDataQuadraticStd,'k--'); 
-plot(nTrainArray,runDataQuadraticMean + runDataQuadraticStd,'k--'); 
-plot(nTrainArray,runDataConicMean,'y-');
-plot(nTrainArray,runDataConicMean - runDataConicStd,'y--'); 
-plot(nTrainArray,runDataConicMean + runDataConicStd,'y--'); 
-hold off;
-title('RMSE of various methods')
-ylabel('RMSE (lower is better)')
-xlabel('Sample size')
 
+y = [runDataOLSMean runDataBaselineMean runDataLinearMean runDataQuadraticMean runDataConicMean];% nrows is sample size, ncols is methods
+errY = [runDataOLSStd runDataBaselineStd runDataLinearStd runDataQuadraticStd runDataConicStd];
+
+figure(1); h = barwitherr(errY, y);% Plot with errorbars
+
+set(gca,'XTickLabel',nTrainArray);
+legend('Multiple Linear Regression','Ridge Regression','With Linear','With Quadratic', 'With Conic');
+ylabel('RMSE (lower is better)');
+set(h(1),'FaceColor','k');
+xlabel('Sample size');
+
+
+% figure(1); plot(nTrainArray,runDataOLSMean,'b-'); hold on;
+% plot(nTrainArray,runDataOLSMean - runDataOLSStd,'b--'); 
+% plot(nTrainArray,runDataOLSMean + runDataOLSStd,'b--'); 
+% plot(nTrainArray,runDataBaselineMean,'r-');
+% plot(nTrainArray,runDataBaselineMean - runDataBaselineStd,'r--'); 
+% plot(nTrainArray,runDataBaselineMean + runDataBaselineStd,'r--');
+% plot(nTrainArray,runDataLinearMean,'g-');
+% plot(nTrainArray,runDataLinearMean - runDataLinearStd,'g--'); 
+% plot(nTrainArray,runDataLinearMean + runDataLinearStd,'g--'); 
+% plot(nTrainArray,runDataQuadraticMean,'k-');
+% plot(nTrainArray,runDataQuadraticMean - runDataQuadraticStd,'k--'); 
+% plot(nTrainArray,runDataQuadraticMean + runDataQuadraticStd,'k--'); 
+% plot(nTrainArray,runDataConicMean,'y-');
+% plot(nTrainArray,runDataConicMean - runDataConicStd,'y--'); 
+% plot(nTrainArray,runDataConicMean + runDataConicStd,'y--'); 
+% hold off;
+% title('RMSE of various methods')
+% ylabel('RMSE (lower is better)')
+% xlabel('Sample size')
+
+%% Computation time plots for all the runs
 
