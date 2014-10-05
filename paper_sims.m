@@ -5,14 +5,14 @@
 % matlabpool close force local
 clc;close all;clear all;
 
-s = RandStream('mcg16807','Seed',1000) ; RandStream.setGlobalStream(s);
+s = RandStream('mcg16807','Seed',42) ; RandStream.setGlobalStream(s);
 nRuns       = 3;
-nBeta       = 10; %fixed dimension. Higher means, more data is required.
+nBeta       = 60; %fixed dimension. Higher means, more data is required.
 betaTrue    = randn(nBeta,1);
-nTrainArray = floor(nBeta*[1.5:1:4.5]);
+nTrainArray = floor(nBeta*5*[1.5:.5:3]);
 nTest       = max(nTrainArray);%can be anything.
-nKnowledge  = nBeta; %floor(sqrt(max(nTrainArray)));
-noiseSigma  = 1*sqrt(nBeta);
+nKnowledge  = 2*nBeta; %floor(sqrt(max(nTrainArray)));
+noiseSigma  = .01*sqrt(nBeta);
 
 %The features need not be random here. Only the residuals need to be random.
 
@@ -20,7 +20,7 @@ noiseSigma  = 1*sqrt(nBeta);
 % featureSigma = featureSigma'*featureSigma;
 featureSigma = gallery('randcorr',nBeta);
 sampleTestX = randn(nTest,nBeta)*chol(featureSigma); %kept same for a given beta
-sampleTestY = sampleTestX*betaTrue + noiseSigma*randn(nTest,1);
+sampleTestY = sampleTestX*betaTrue + noiseSigma*randn(nTest,1) + noiseSigma*trnd(1,nTest,1);
 sampleKnowledgeX = randn(nKnowledge,nBeta)*chol(featureSigma); %kept same for a given beta
 sampleKnowledgeY = sampleKnowledgeX*betaTrue; %No need to add noise% + noiseSigma*randn(nKnowledge,1);
 
@@ -31,14 +31,14 @@ for i=1:nRuns %Multiple samples from the data source.
     fprintf('Ridge Regression. Run %d of %d\n',i,nRuns);
     
     sampleTrainX = randn(max(nTrainArray),nBeta)*chol(featureSigma);
-    sampleTrainY = sampleTrainX*betaTrue + noiseSigma*randn(max(nTrainArray),1);
+    sampleTrainY = sampleTrainX*betaTrue + noiseSigma*randn(max(nTrainArray),1) + noiseSigma*trnd(1,max(nTrainArray),1);
 
     % Step 2: In this step, we will fit three models, OLS, ridge regression and
     % ridge regression with side knowledge.
     
     %Some common settings
     nFolds   = 5;
-    nRepeats = 1;
+    nRepeats = 3;
     coeffRange = 2.^([-7:2:0]);
 
     % Step 2a: Ordinary least squares (without any regularization)
@@ -132,13 +132,20 @@ runDataQuadraticMean = mean(runDataQuadratic,2); runDataQuadraticStd = std(runDa
 runDataConicMean = mean(runDataConic,2); runDataConicStd = std(runDataConic,1,2);
 
 
-y = [runDataOLSMean runDataBaselineMean runDataLinearMean runDataQuadraticMean runDataConicMean];% nrows is sample size, ncols is methods
-errY = [runDataOLSStd runDataBaselineStd runDataLinearStd runDataQuadraticStd runDataConicStd];
+% y = [runDataOLSMean runDataBaselineMean runDataLinearMean runDataQuadraticMean runDataConicMean];% nrows is sample size, ncols is methods
+% errY = [runDataOLSStd runDataBaselineStd runDataLinearStd runDataQuadraticStd runDataConicStd];
+% figure(1); h = barwitherr(errY, y);% Plot with errorbars
+% set(gca,'XTickLabel',nTrainArray);
+% legend('Multiple Linear Regression','Ridge Regression','With Linear','With Quadratic', 'With Conic');
+% ylabel('RMSE (lower is better)');
+% set(h(1),'FaceColor','k');
+% xlabel('Sample size');
 
+y = [runDataBaselineMean runDataLinearMean runDataQuadraticMean runDataConicMean];% nrows is sample size, ncols is methods
+errY = [runDataBaselineStd runDataLinearStd runDataQuadraticStd runDataConicStd];
 figure(1); h = barwitherr(errY, y);% Plot with errorbars
-
 set(gca,'XTickLabel',nTrainArray);
-legend('Multiple Linear Regression','Ridge Regression','With Linear','With Quadratic', 'With Conic');
+legend('Ridge Regression','With Linear','With Quadratic', 'With Conic');
 ylabel('RMSE (lower is better)');
 set(h(1),'FaceColor','k');
 xlabel('Sample size');

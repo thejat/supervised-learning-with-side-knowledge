@@ -17,6 +17,9 @@ if(strcmp(strKnowledgeType,'Linear'))
             end
             k=k+1;
         end
+        if(k>10*size(X,1))
+            break;
+        end
     end
 end
 
