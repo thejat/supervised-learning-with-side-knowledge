@@ -5,14 +5,14 @@
 % matlabpool close force local
 clc;close all;clear all;
 
-s = RandStream('mcg16807','Seed',42) ; RandStream.setGlobalStream(s);
-nRuns       = 3;
+s = RandStream('mcg16807','Seed',999) ; RandStream.setGlobalStream(s);
+nRuns       = 1;
 nBeta       = 60; %fixed dimension. Higher means, more data is required.
 betaTrue    = randn(nBeta,1);
 nTrainArray = floor(nBeta*5*[1.5:.5:3]);
 nTest       = max(nTrainArray);%can be anything.
 nKnowledge  = 2*nBeta; %floor(sqrt(max(nTrainArray)));
-noiseSigma  = .01*sqrt(nBeta);
+noiseSigma  = .005*sqrt(nBeta);
 
 %The features need not be random here. Only the residuals need to be random.
 
@@ -38,7 +38,7 @@ for i=1:nRuns %Multiple samples from the data source.
     
     %Some common settings
     nFolds   = 5;
-    nRepeats = 3;
+    nRepeats = 1;
     coeffRange = 2.^([-7:2:0]);
 
     % Step 2a: Ordinary least squares (without any regularization)
