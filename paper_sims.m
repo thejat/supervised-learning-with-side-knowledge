@@ -10,7 +10,7 @@ s = RandStream('mcg16807','Seed',999) ; RandStream.setGlobalStream(s);
 nRuns       = 30;
 nBeta       = 60; %fixed dimension. Higher means, more data is required.
 betaTrue    = randn(nBeta,1);
-nTrainArray = floor(nBeta*5*[1.5:.5:3]);
+nTrainArray = floor(nBeta*5*[1:.5:2.5]);
 nTest       = max(nTrainArray);%can be anything.
 nKnowledge  = 2*nBeta; %floor(sqrt(max(nTrainArray)));
 noiseSigma  = .005*sqrt(nBeta);
@@ -38,8 +38,8 @@ for i=1:nRuns %Multiple samples from the data source.
     
     %Some common settings
     nFolds   = 5;
-    nRepeats = 1;
-    coeffRange = 2.^([-7:2:0]);
+    nRepeats = 3;
+    coeffRange = 2.^([-8:2:1]);
 
     % Step 2a: Ordinary least squares (without any regularization)
 
@@ -107,32 +107,35 @@ for i=1:nRuns %Multiple samples from the data source.
     runDataLinear(:,i) = rmseLinearArray';
     runDataQuadratic(:,i) = rmseQuadraticArray';
     runDataConic(:,i) = rmseConicArray';
+    
+    
+    % Plotting
+    runDataOLSMean = mean(runDataOLS,2); runDataOLSStd = std(runDataOLS,1,2);
+    runDataBaselineMean = mean(runDataBaseline,2); runDataBaselineStd = std(runDataBaseline,1,2);
+    runDataLinearMean = mean(runDataLinear,2); runDataLinearStd = std(runDataLinear,1,2);
+    runDataQuadraticMean = mean(runDataQuadratic,2); runDataQuadraticStd = std(runDataQuadratic,1,2);
+    runDataConicMean = mean(runDataConic,2); runDataConicStd = std(runDataConic,1,2);
+
+
+%     y = [runDataOLSMean runDataBaselineMean runDataLinearMean runDataQuadraticMean runDataConicMean];% nrows is sample size, ncols is methods
+%     errY = [runDataOLSStd runDataBaselineStd runDataLinearStd runDataQuadraticStd runDataConicStd];
+%     figure(1); h = barwitherr(errY, y);% Plot with errorbars
+%     set(gca,'XTickLabel',nTrainArray);
+%     legend('Multiple Linear Regression','Ridge Regression','With Linear','With Quadratic', 'With Conic');
+%     ylabel('RMSE (lower is better)');
+%     set(h(1),'FaceColor','k');
+%     xlabel('Sample size');
+    
+    y = [runDataBaselineMean runDataLinearMean runDataQuadraticMean runDataConicMean];% nrows is sample size, ncols is methods
+    errY = [runDataBaselineStd runDataLinearStd runDataQuadraticStd runDataConicStd];
+    figure; h = barwitherr(errY, y);% Plot with errorbars
+    set(gca,'XTickLabel',nTrainArray);
+    legend('Ridge Regression','With Linear','With Quadratic', 'With Conic');
+    ylabel('RMSE (lower is better)');
+    set(h(1),'FaceColor','k');
+    xlabel('Sample size');
+    
+    save experimentData.mat %hackish way of saving state in case of error/interruption
 end
 
 matlabpool close;
-
-% Plotting
-runDataOLSMean = mean(runDataOLS,2); runDataOLSStd = std(runDataOLS,1,2);
-runDataBaselineMean = mean(runDataBaseline,2); runDataBaselineStd = std(runDataBaseline,1,2);
-runDataLinearMean = mean(runDataLinear,2); runDataLinearStd = std(runDataLinear,1,2);
-runDataQuadraticMean = mean(runDataQuadratic,2); runDataQuadraticStd = std(runDataQuadratic,1,2);
-runDataConicMean = mean(runDataConic,2); runDataConicStd = std(runDataConic,1,2);
-
-
-y = [runDataOLSMean runDataBaselineMean runDataLinearMean runDataQuadraticMean runDataConicMean];% nrows is sample size, ncols is methods
-errY = [runDataOLSStd runDataBaselineStd runDataLinearStd runDataQuadraticStd runDataConicStd];
-figure(1); h = barwitherr(errY, y);% Plot with errorbars
-set(gca,'XTickLabel',nTrainArray);
-legend('Multiple Linear Regression','Ridge Regression','With Linear','With Quadratic', 'With Conic');
-ylabel('RMSE (lower is better)');
-set(h(1),'FaceColor','k');
-xlabel('Sample size');
-
-% y = [runDataBaselineMean runDataLinearMean runDataQuadraticMean runDataConicMean];% nrows is sample size, ncols is methods
-% errY = [runDataBaselineStd runDataLinearStd runDataQuadraticStd runDataConicStd];
-% figure(1); h = barwitherr(errY, y);% Plot with errorbars
-% set(gca,'XTickLabel',nTrainArray);
-% legend('Ridge Regression','With Linear','With Quadratic', 'With Conic');
-% ylabel('RMSE (lower is better)');
-% set(h(1),'FaceColor','k');
-% xlabel('Sample size');

@@ -43,7 +43,7 @@ if(strcmp(strKnowledgeType,'Conic'))
     knowledge.conic.r = 0.1;
     knowledge.conic.m = size(X,1);
     knowledge.conic.X = X;
-    knowledge.conic.Y = 1.1*(Y + knowledge.conic.r*norm(betaTrue,2));
+    knowledge.conic.Y = 1*(Y + knowledge.conic.r*norm(betaTrue,2));
 end
 
 %% Debugging
