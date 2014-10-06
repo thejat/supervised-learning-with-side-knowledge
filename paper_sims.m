@@ -100,42 +100,41 @@ for i=1:nRuns %Multiple samples from the data source.
         rmseLinearArray(j) = metricsLinear{j}.rmse;
         rmseQuadraticArray(j) = metricsQuadratic{j}.rmse;
         rmseConicArray(j) = metricsConic{j}.rmse;
-
     end
     runDataOLS(:,i) = rmseOLSArray'; 
     runDataBaseline(:,i) = rmseBaselineArray';
     runDataLinear(:,i) = rmseLinearArray';
     runDataQuadratic(:,i) = rmseQuadraticArray';
     runDataConic(:,i) = rmseConicArray';
-    
-    
-    % Plotting
-    runDataOLSMean = mean(runDataOLS,2); runDataOLSStd = std(runDataOLS,1,2);
-    runDataBaselineMean = mean(runDataBaseline,2); runDataBaselineStd = std(runDataBaseline,1,2);
-    runDataLinearMean = mean(runDataLinear,2); runDataLinearStd = std(runDataLinear,1,2);
-    runDataQuadraticMean = mean(runDataQuadratic,2); runDataQuadraticStd = std(runDataQuadratic,1,2);
-    runDataConicMean = mean(runDataConic,2); runDataConicStd = std(runDataConic,1,2);
-
-
-%     y = [runDataOLSMean runDataBaselineMean runDataLinearMean runDataQuadraticMean runDataConicMean];% nrows is sample size, ncols is methods
-%     errY = [runDataOLSStd runDataBaselineStd runDataLinearStd runDataQuadraticStd runDataConicStd];
-%     figure(1); h = barwitherr(errY, y);% Plot with errorbars
-%     set(gca,'XTickLabel',nTrainArray);
-%     legend('Multiple Linear Regression','Ridge Regression','With Linear','With Quadratic', 'With Conic');
-%     ylabel('RMSE (lower is better)');
-%     set(h(1),'FaceColor','k');
-%     xlabel('Sample size');
-    
-    y = [runDataBaselineMean runDataLinearMean runDataQuadraticMean runDataConicMean];% nrows is sample size, ncols is methods
-    errY = [runDataBaselineStd runDataLinearStd runDataQuadraticStd runDataConicStd];
-    figure; h = barwitherr(errY, y);% Plot with errorbars
-    set(gca,'XTickLabel',nTrainArray);
-    legend('Ridge Regression','With Linear','With Quadratic', 'With Conic');
-    ylabel('RMSE (lower is better)');
-    set(h(1),'FaceColor','k');
-    xlabel('Sample size');
-    
+        
     save experimentData.mat %hackish way of saving state in case of error/interruption
 end
 
 matlabpool close;
+
+%% Plotting
+
+dataOLS =  quantile(runDataOLS,[.25 .5 .75],2);
+dataBaseline =  quantile(runDataBaseline,[.25 .5 .75],2);
+dataLinear =  quantile(runDataLinear,[.25 .5 .75],2);
+dataQuadratic =  quantile(runDataQuadratic,[.25 .5 .75],2);
+dataConic =  quantile(runDataConic,[.25 .5 .75],2);
+
+y = [dataOLS(:,2) dataBaseline(:,2) dataLinear(:,2) dataQuadratic(:,2) dataConic(:,2)];
+errY(:,:,1) = [dataOLS(:,1) dataBaseline(:,1) dataLinear(:,1) dataQuadratic(:,1) dataConic(:,1)];
+errY(:,:,2) = [dataOLS(:,3) dataBaseline(:,3) dataLinear(:,3) dataQuadratic(:,3) dataConic(:,3)];
+h0 = figure(1); 
+width=2;
+set(0,'DefaultAxesLineWidth',width);
+set(0,'DefaultLineLineWidth',width);
+get(0,'Default');
+set(gca,'LineWidth',width);
+h = barwitherr(errY, y);% Plot with errorbars
+set(gca,'XTickLabel',nTrainArray);
+legend('Multiple Linear Regression','Ridge Regression','With Linear','With Quadratic', 'With Conic');
+ylabel('RMSE (lower is better)','FontSize',22);
+set(h(1),'FaceColor','k');
+xlabel('Sample size','FontSize',22);
+set(gca,'FontSize',18,'fontWeight','bold');
+set(findall(h,'type','text'),'fontSize',18,'fontWeight','bold');
+% saveas(h0,'experiment.png');
